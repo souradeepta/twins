@@ -3,33 +3,75 @@ import hashlib
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import logging
-from tkinter import ttk
 import threading
+from tkinter import ttk
+from moviepy.editor import VideoFileClip
 
-def file_hash(filepath):
-    sha256_hash = hashlib.sha256()
-    with open(filepath, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-    return sha256_hash.hexdigest()
+def setup_logger():
+    logger = logging.getLogger("duplicate_file_finder")
+    logger.setLevel(logging.DEBUG)
 
-def find_duplicate_files(directories, search_subfolders=True):
-    file_hashes = {}
-    duplicate_files = []
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    # Create a console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    # Create a file handler
+    fh = logging.FileHandler("duplicate_file_finder.log")
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+    return logger
+
+# Define the logger globally
+logger = setup_logger()
+
+def video_file_hash(filepath):
+    # Calculate the MD5 hash of the first 5 seconds of the video file
+    try:
+        chunk_size = 4096
+        hashobj = hashlib.md5()
+        total_chunks = 5 * 25  # 25 frames per second for 5 seconds
+        current_chunk = 0
+
+        with open(filepath, "rb") as f:
+            for _ in range(total_chunks):
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                hashobj.update(chunk)
+                current_chunk += 1
+                update_progress(current_chunk, total_chunks)
+
+        return hashobj.hexdigest()
+    except Exception as e:
+        print(f"Error while hashing file {filepath}: {e}")
+        return None
+
+def find_duplicate_video_files(directories, search_subfolders=True):
+    duplicate_files = {}
 
     for directory in directories:
         for dirpath, _, filenames in os.walk(directory):
-            if not search_subfolders and dirpath != directory:
-                continue
-
             for filename in filenames:
                 filepath = os.path.join(dirpath, filename)
-                file_hash_value = file_hash(filepath)
 
-                if file_hash_value in file_hashes:
-                    duplicate_files.append((file_hashes[file_hash_value], filepath))
-                else:
-                    file_hashes[file_hash_value] = filepath
+                # Check if the file is a video file (you can add more video file extensions if needed)
+                if filename.lower().endswith(('.mp4', '.avi', '.mkv', '.mov', '.wmv')):
+                    filehash = video_file_hash(filepath)
+
+                    if filehash:
+                        if filehash in duplicate_files:
+                            duplicate_files[filehash].append(filepath)
+                        else:
+                            duplicate_files[filehash] = [filepath]
+
+    # Filter out non-duplicate files
+    duplicate_files = {hashval: filelist for hashval, filelist in duplicate_files.items() if len(filelist) > 1}
 
     return duplicate_files
 
@@ -41,13 +83,10 @@ def delete_file(filepath):
         logger.exception(f"Error deleting file: {filepath} exception {e}")
 
 
-# subfolders_var = tk.BooleanVar()  # Add the subfolders_var
-
 def browse_directory():
     selected_directory = filedialog.askdirectory()
     if selected_directory:
         directory_listbox.insert(tk.END, selected_directory)
-
 def update_progress(current, total):
     progress_value = int((current / total) * 100)
     progress_bar["value"] = progress_value
@@ -101,7 +140,7 @@ def find_duplicates():
             logger.info(f"Processing directory: {directory}")
 
             # Actual file processing using os.walk()
-            current_duplicates = find_duplicate_files([directory], search_subfolders)
+            current_duplicates = find_duplicate_video_files([directory], search_subfolders)
 
             if current_duplicates:
                 duplicate_files.update(current_duplicates)
@@ -155,13 +194,12 @@ def unselect_directory():
     if selected_indices:
         directory_listbox.delete(selected_indices[-1])
 
-# Set up logging configuration
-logging.basicConfig(filename="duplicate_file_finder.log", level=logging.DEBUG,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger()
-
 app = tk.Tk()
-app.title("Duplicate File Finder")
+app.title("Duplicate Video File Finder")
+
+# Create the main frame
+main_frame = ttk.Frame(app)
+main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
 # Get the screen dimensions for improved responsiveness
 screen_width = app.winfo_screenwidth()
@@ -175,6 +213,10 @@ app.geometry(f"{app_width}x{app_height}")
 # Create a main frame to contain all the widgets
 main_frame = ttk.Frame(app)
 main_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+# # Create the main frame
+# main_frame = ttk.Frame(app)
+# main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
 # Style the widgets using ttk
 style = ttk.Style()
