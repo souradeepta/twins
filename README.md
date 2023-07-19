@@ -90,7 +90,7 @@ The Duplicate Video File Finder application is licensed under the <ins>MIT Licen
 
 ### Author
 
-The application was created by <ins>Your Name</ins>.
+The application was created by <ins>Souradeepta</ins>.
 
 ### Contributing
 
