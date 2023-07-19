@@ -5,7 +5,7 @@ from tkinter import filedialog, messagebox
 import logging
 import threading
 from tkinter import ttk
-from moviepy.editor import VideoFileClip
+
 
 def setup_logger():
     logger = logging.getLogger("duplicate_file_finder")
@@ -27,8 +27,10 @@ def setup_logger():
 
     return logger
 
+
 # Define the logger globally
 logger = setup_logger()
+
 
 def video_file_hash(filepath):
     # Calculate the MD5 hash of the first 5 seconds of the video file
@@ -51,6 +53,7 @@ def video_file_hash(filepath):
     except Exception as e:
         print(f"Error while hashing file {filepath}: {e}")
         return None
+
 
 def find_duplicate_video_files(directories, search_subfolders=True):
     duplicate_files = {}
@@ -75,6 +78,7 @@ def find_duplicate_video_files(directories, search_subfolders=True):
 
     return duplicate_files
 
+
 def delete_file(filepath):
     try:
         os.remove(filepath)
@@ -87,11 +91,14 @@ def browse_directory():
     selected_directory = filedialog.askdirectory()
     if selected_directory:
         directory_listbox.insert(tk.END, selected_directory)
+
+
 def update_progress(current, total):
     progress_value = int((current / total) * 100)
     progress_bar["value"] = progress_value
     percentage_label.config(text=f"{progress_value}%")
     app.update_idletasks()
+
 
 def save_results_to_file(duplicate_files):
     file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
@@ -106,6 +113,7 @@ def save_results_to_file(duplicate_files):
             messagebox.showinfo("Save Complete", "Duplicate file results have been saved successfully.")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred while saving the file: {e}")
+
 
 def find_duplicates():
     global logger, subfolders_var, progress_bar, save_checkbox
@@ -172,6 +180,7 @@ def find_duplicates():
     search_thread = threading.Thread(target=search_and_update_progress)
     search_thread.start()
 
+
 def delete_selected_files():
     global logger
     selected_indices = result_text.tag_ranges(tk.SEL)
@@ -189,10 +198,12 @@ def delete_selected_files():
         if duplicate_var.get():
             delete_file(duplicate_path)
 
+
 def unselect_directory():
     selected_indices = directory_listbox.curselection()
     if selected_indices:
         directory_listbox.delete(selected_indices[-1])
+
 
 app = tk.Tk()
 app.title("Duplicate Video File Finder")
